@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useApp } from '../app'
 import type { Viewer } from '../data/sharing'
+import { sharedInvoice } from '../lib/sharing'
 import { DayReport } from '../components/DayReport'
 import { Field, Head } from '../components/ui'
 
@@ -19,7 +20,7 @@ export default function Contractor() {
       <Head title="Contractor access" />
       <section className="panel mb-8">
         <h2 className="mb-2">Who can see your hours</h2>
-        <p className="mb-4">They see dates, times, breaks, sites, hours and amounts for their own business. They can’t see your notes, other clients, invoices, receipts, tax or bank details, and can’t change anything.</p>
+        <p className="mb-4">They see dates, times, breaks, sites, hours, amounts and invoice numbers for their own business. They can’t see your notes, other clients, the invoices themselves, receipts, tax or bank details, and can’t change anything.</p>
         {!sharing && <p className="hint">Connect Supabase to give someone access.</p>}
         {err && <p role="alert" className="font-semibold text-rust">{err}</p>}
         {list && <div className="rows mb-4">{list.map(v => <div key={v.id} className="flex items-center justify-between gap-3 py-2"><span className="min-w-0"><b className="block truncate">{v.email}</b><span className="hint">{name(v.client_id)}</span></span><button className="btn btn-danger" onClick={() => void remove(v)}>{sure === v.id ? 'Remove access?' : 'Remove'}</button></div>)}{!list.length && <p className="hint py-2">Nobody has access.</p>}</div>}
@@ -33,7 +34,7 @@ export default function Contractor() {
       <h2 className="mb-3">What they see</h2>
       <div className="mb-4 max-w-md"><Field label="Preview for"><select value={cid} onChange={e => setCid(e.target.value)}><option value="">Choose a client</option>{data.clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field></div>
       {unassigned > 0 && <p className="hint mb-4">{unassigned} work {unassigned === 1 ? 'entry has' : 'entries have'} no client, so no contractor sees {unassigned === 1 ? 'it' : 'them'}.</p>}
-      <DayReport rows={cid ? data.work.filter(w => w.client_id === cid) : []} today={today} />
+      <DayReport rows={cid ? data.work.filter(w => w.client_id === cid).map(w => ({ ...w, invoice: sharedInvoice(w, data.invoices) })) : []} today={today} />
     </>
   )
 }

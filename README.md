@@ -33,10 +33,10 @@ Free Supabase projects can pause when unused and have limited backups, so keep d
 
 ## Give a contractor access
 
-1. Run `supabase/contractor-access.sql` once in Supabase's SQL Editor, after `schema.sql`.
+1. In Supabase's SQL Editor, after `schema.sql`, run `supabase/contractor-access.sql` once, then `supabase/contractor-invoices.sql`.
 2. In the app, open **Contractor**, enter their email, choose their business and select **Give access**.
 3. In Supabase, **Authentication > Users > Add user**: same email, a password, Auto Confirm on. Keep sign-ups off.
-4. Send them the site link and their login privately. They see a read-only page of days, times, hours, sites and amounts for that business only.
+4. Send them the site link and their login privately. They see a read-only page of days, times, hours, sites, amounts and invoice numbers for that business only.
 
 Removing access in the app takes effect at once. Also delete their user in Supabase.
 
