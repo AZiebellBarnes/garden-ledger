@@ -22,9 +22,14 @@ export function buildWorkItems(work: Work[]): Item[] {
 }
 export const supplierOf = (s: Settings): Supplier => ({ ...s.business, bank: s.bank })
 export const billTo = (c?: Client) => (c ? { name: c.name, lines: c.lines } : null)
+const hasWorkLine = (i: Invoice) => i.items.some(x => x.source === 'work')
+/** Hours attached afterwards to an invoice whose lines already charge for them. */
+export const coveredByLines = (i: Invoice, work: Work[]) => i.items.length > 0 && !hasWorkLine(i) && work.some(w => w.invoice_id === i.id)
+/** Invoices that hours can be marked as already billed on. */
+export const attachable = (list: Invoice[], clientId: string) => (clientId ? list.filter(i => i.status !== 'draft' && i.client_id === clientId).sort((a, b) => b.number.localeCompare(a.number, undefined, { numeric: true })) : [])
 /** Drafts follow current hours and details; sent invoices keep what was on them. */
 export function refreshDraft(i: Invoice, work: Work[], s: Settings, clients: Client[]): Invoice {
   if (i.status !== 'draft') return i
   const linked = work.filter(w => w.invoice_id === i.id)
-  return { ...i, gst: s.gst_registered, items: [...buildWorkItems(linked), ...i.items.filter(x => x.source !== 'work')], daily: dailyTotals(linked), supplier: supplierOf(s), bill_to: billTo(clients.find(c => c.id === i.client_id)) }
+  return { ...i, gst: s.gst_registered, items: [...(coveredByLines(i, work) ? [] : buildWorkItems(linked)), ...i.items.filter(x => x.source !== 'work')], daily: dailyTotals(linked), supplier: supplierOf(s), bill_to: billTo(clients.find(c => c.id === i.client_id)) }
 }

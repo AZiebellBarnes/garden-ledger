@@ -70,6 +70,20 @@ await card.getByRole('button', { name: 'Mark as sent' }).click(); await card.get
 await nav('Hours'); await p.getByRole('button', { name: /Beach Road/ }).click(); await p.getByText('can’t be changed').waitFor(); await btn('Close').click()
 await nav('Invoices'); await card.getByRole('button', { name: 'Mark as paid' }).click(); await p.locator('dialog').getByRole('button', { name: 'Mark as paid' }).click(); await gone()
 await nav('Hours'); await p.locator('.tag-paid').waitFor()
+// Hours already on a sent invoice attach to it without changing its total.
+await nav('Hours'); await btn('Log hours').first().click(); await fill('Start', '07:00'); await fill('Finish', '09:00'); await fill('Site', 'Old job')
+await p.locator('dialog').getByLabel('Already invoiced').check()
+if (setup) await p.locator('dialog').getByLabel('Which invoice').selectOption({ label: await p.locator('dialog option', { hasText: 'INV-002' }).innerText() })
+await p.locator('dialog').screenshot({ path: 'screenshots/billed.png' })
+await btn('Save hours').click(); await gone()
+assert.equal(await p.getByRole('button', { name: /Old job/ }).locator('.tag').innerText(), setup ? 'Invoiced' : 'Paid')
+if (setup) {
+  await nav('Invoices'); const two = p.locator('article').filter({ hasText: 'INV-002' })
+  await two.getByRole('button', { name: 'Back to draft' }).click(); await two.getByRole('button', { name: 'Edit' }).click()
+  await p.getByText('already covered by the lines').waitFor(); await btn('Save draft').click(); await gone()
+  await two.getByText('$667.50').waitFor(); await two.getByRole('button', { name: 'Mark as sent' }).click(); await two.getByRole('button', { name: 'Mark as paid' }).waitFor()
+  await nav('Hours'); assert.equal(await p.getByRole('button', { name: /Old job/ }).locator('.tag').innerText(), 'Invoiced')
+}
 await nav('Tax'); await p.getByText('Recommended weekly tax set-aside').waitFor()
 const before = await p.locator('main').innerText()
 await p.getByLabel('Use my own tax percentage').click(); await p.getByLabel('Tax buffer (%)').waitFor()

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useApp } from '../app'
 import type { Invoice } from '../lib/types'
 import { addDays, isDate, longDate } from '../lib/dates'
-import { buildWorkItems, effectiveStatus, nextNumber, refreshDraft, totals, workStatus } from '../lib/invoices'
+import { buildWorkItems, coveredByLines, effectiveStatus, nextNumber, refreshDraft, totals, workStatus } from '../lib/invoices'
 import { dailyTotals, earningsOf, hrs, minutesOf } from '../lib/hours'
 import { aud, parseCents, plain } from '../lib/money'
 import { renderInvoice } from '../lib/pdf'
@@ -17,7 +17,8 @@ function Editor({ inv, onClose }: { inv?: Invoice; onClose: () => void }) {
   const { v, set, bind } = useText({ number: inv?.number ?? nextNumber(data.invoices, s.invoice_prefix, s.invoice_pad), client: inv?.client_id ?? data.clients[0]?.id ?? '', issue: inv?.issue_date ?? today, due: inv?.due_date ?? addDays(today, s.terms_days), notes: inv?.notes ?? '' })
   const [id] = useState(inv?.id ?? crypto.randomUUID())
   const [custom, setCustom] = useState((inv?.items ?? []).filter(i => i.source !== 'work').map(i => ({ d: i.description, a: plain(i.amount_cents) })))
-  const avail = data.work.filter(w => (w.invoice_id === id || workStatus(w, data.invoices) === 'Unbilled') && (!w.client_id || w.client_id === v.client)).sort((a, b) => a.date.localeCompare(b.date))
+  const covered = inv && coveredByLines(inv, data.work) ? data.work.filter(w => w.invoice_id === inv.id) : []
+  const avail = covered.length ? [] : data.work.filter(w => (w.invoice_id === id || workStatus(w, data.invoices) === 'Unbilled') && (!w.client_id || w.client_id === v.client)).sort((a, b) => a.date.localeCompare(b.date))
   const [picked, setPicked] = useState(new Set(inv ? data.work.filter(w => w.invoice_id === inv.id).map(w => w.id) : []))
   const work = avail.filter(w => picked.has(w.id))
   const days = dailyTotals(work)
@@ -31,8 +32,8 @@ function Editor({ inv, onClose }: { inv?: Invoice; onClose: () => void }) {
     if (items.some(i => !i.description || Number.isNaN(i.amount_cents))) return 'Each custom line needs a description and an amount.'
     if (!items.length) return 'Choose some work or add a line.'
     const base: Invoice = { id, number, client_id: v.client, status: 'draft', issue_date: v.issue, due_date: v.due, sent_date: null, paid_date: null, gst: s.gst_registered, items, daily: days, supplier: null, bill_to: null, notes: v.notes.trim() }
-    const linked = data.work.map(w => ({ ...w, invoice_id: work.some(x => x.id === w.id) ? id : null }))
-    return save(() => store.saveInvoice(refreshDraft(base, linked, s, data.clients), work.map(w => w.id)), 'Draft saved')
+    const linked = data.work.map(w => ({ ...w, invoice_id: [...work, ...covered].some(x => x.id === w.id) ? id : null }))
+    return save(() => store.saveInvoice(refreshDraft(base, linked, s, data.clients), [...work, ...covered].map(w => w.id)), 'Draft saved')
   }
   return (
     <FormDialog title={inv ? `Edit ${inv.number}` : 'New invoice'} onClose={onClose} save="Save draft" submit={submit} onDelete={inv && (() => save(() => store.deleteInvoice(inv.id), 'Draft deleted'))}>
@@ -43,7 +44,7 @@ function Editor({ inv, onClose }: { inv?: Invoice; onClose: () => void }) {
       <fieldset className="wide">
         <legend className="label">Unbilled work</legend>
         {avail.length > 0 && <button type="button" className="btn btn-quiet mb-2" onClick={() => setPicked(work.length === avail.length ? new Set() : new Set(avail.map(w => w.id)))}>{work.length === avail.length ? 'Clear all' : 'Select all'}</button>}
-        {!avail.length && <p className="hint">No unbilled work for this client.</p>}
+        {!avail.length && <p className="hint">{covered.length ? `${covered.length} hours ${covered.length === 1 ? 'entry is' : 'entries are'} attached and already covered by the lines below.` : 'No unbilled work for this client.'}</p>}
         <div className="rows">{avail.map(w => <label key={w.id} className="flex items-center gap-3 py-2.5"><input type="checkbox" checked={picked.has(w.id)} onChange={e => { const n = new Set(picked); if (e.target.checked) n.add(w.id); else n.delete(w.id); setPicked(n) }} /><span className="flex-1">{longDate(w.date)} {w.site}<span className="hint block">{hrs(minutesOf(w))} hours</span></span><b>{aud(earningsOf(w))}</b></label>)}</div>
       </fieldset>
       {days.length > 0 && <div className="wide rounded-md bg-lichen p-3"><p className="label">Daily breakdown, not printed</p>{days.map(d => <p key={d.date} className="flex justify-between"><span>{longDate(d.date)}, {hrs(d.minutes)} h</span><span>{aud(d.cents)}</span></p>)}<p className="hint mt-2">Prints as one “Gardening services” line.</p></div>}

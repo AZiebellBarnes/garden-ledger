@@ -65,3 +65,13 @@ test('a deleted login takes its records with it', async () => {
   await db.exec(`reset role; delete from auth.users where id = '${A}'`)
   expect((await db.query('select * from invoices')).rows).toEqual([])
 })
+test('hours can be attached to a sent invoice, then lock', async () => {
+  await as(B)
+  const i = INV.replace(/1$/, '7'), w1 = W1.replace(/1$/, '7'), w2 = W1.replace(/1$/, '8')
+  await save(inv({ id: i, status: 'sent' }), [])
+  await work(w2)
+  await db.query(`insert into work_entries (id, date, start, finish, break_min, site, rate_cents, notes, invoice_id) values ($1, '2026-11-24', '07:00', '16:00', 0, '', 3000, '', $2)`, [w1, i])
+  await db.query('update work_entries set invoice_id = $2 where id = $1', [w2, i])
+  expect(await linked()).toEqual([w1, w2])
+  await expect(db.query('delete from work_entries where id = $1', [w1])).rejects.toThrow(/locked/)
+})

@@ -4,7 +4,8 @@ import { CATEGORIES, type Category, type Client, type Fuel, type Receipt, type T
 import { validate } from '../lib/validate'
 import { aud, parseCents, parseScaled, plain } from '../lib/money'
 import { earningsCents, hrs, workMinutes } from '../lib/hours'
-import { workLocked } from '../lib/invoices'
+import { attachable, totals, workLocked } from '../lib/invoices'
+import { earningsOf } from '../lib/hours'
 import { Check, Field, FormDialog, useSave } from './ui'
 import { ACCEPT, makeThumb } from './files'
 
@@ -25,10 +26,15 @@ export function WorkForm({ row, onClose }: P<Work>) {
   const rateFor = (id: string) => plain(data.clients.find(c => c.id === id)?.rate_cents ?? data.settings.default_rate_cents)
   const { v, set, bind } = useText({ date: row?.date ?? today, start: row?.start ?? '', finish: row?.finish ?? '', brk: row ? String(row.break_min) : '', client: cid, site: row?.site ?? '', rate: row ? plain(row.rate_cents) : rateFor(cid), notes: row?.notes ?? '' })
   const locked = !!row && workLocked(row, data.invoices)
-  const build = (): Work => ({ id: row?.id ?? crypto.randomUUID(), date: v.date, start: v.start, finish: v.finish, break_min: v.brk.trim() ? parseScaled(v.brk, 0) ?? BAD : 0, client_id: v.client || null, site: v.site.trim(), rate_cents: parseCents(v.rate) ?? BAD, notes: v.notes.trim(), invoice_id: row?.invoice_id ?? null })
+  const inDraft = !!row?.invoice_id && !locked
+  const [billed, setBilled] = useState(locked), [on, setOn] = useState(row?.invoice_id ?? '')
+  const options = attachable(data.invoices, v.client)
+  const chosen = options.find(i => i.id === on) ?? options[0]
+  const attached = chosen ? data.work.filter(x => x.invoice_id === chosen.id && x.id !== row?.id).reduce((a, x) => a + earningsOf(x), 0) : 0
+  const build = (): Work => ({ id: row?.id ?? crypto.randomUUID(), date: v.date, start: v.start, finish: v.finish, break_min: v.brk.trim() ? parseScaled(v.brk, 0) ?? BAD : 0, client_id: v.client || null, site: v.site.trim(), rate_cents: parseCents(v.rate) ?? BAD, notes: v.notes.trim(), invoice_id: billed && chosen ? chosen.id : inDraft ? row.invoice_id : null })
   const w = build(), mins = workMinutes(w.start, w.finish, w.break_min)
   const [id] = useState(w.id)
-  const submit = async () => { const r = { ...build(), id }; return locked ? 'These hours are locked because their invoice has been sent.' : validate('work', r) ?? save(() => store.put('work', r), 'Hours saved') }
+  const submit = async () => { const r = { ...build(), id }; if (billed && !chosen) return 'This client has no sent or paid invoice to choose.'; return locked ? 'These hours are locked because their invoice has been sent.' : validate('work', r) ?? save(() => store.put('work', r), 'Hours saved') }
   return (
     <FormDialog title={row ? 'Edit hours' : 'Log hours'} onClose={onClose} submit={submit} save="Save hours" onDelete={row && !locked ? () => save(() => store.remove('work', row.id), 'Hours deleted') : undefined}>
       {locked && <p className="wide hint">These hours are on a sent invoice, so they can’t be changed.</p>}
@@ -41,6 +47,10 @@ export function WorkForm({ row, onClose }: P<Work>) {
       <Field label="Site"><input {...bind('site')} list="sites" /></Field>
       <datalist id="sites">{[...new Set(data.work.map(x => x.site).filter(Boolean))].map(s => <option key={s} value={s} />)}</datalist>
       <Field label="Notes" wide><textarea rows={2} {...bind('notes')} /></Field>
+      {!locked && !inDraft && <Check label="Already invoiced" checked={billed} onChange={setBilled} hint="For hours that are on an invoice you have already sent. They won’t be offered for billing again." />}
+      {!locked && billed && (chosen
+        ? <Field label="Which invoice" wide hint={`${chosen.number} is ${aud(totals(chosen).subtotal)} before GST. With these hours, ${aud(attached + (mins === null ? 0 : earningsCents(mins, Math.max(0, w.rate_cents))))} of work is attached. Hours lock once saved, so check the times.`}><select value={chosen.id} onChange={e => setOn(e.target.value)}>{options.map(i => <option key={i.id} value={i.id}>{i.number}, {i.issue_date}, {aud(totals(i).total)}, {i.status}</option>)}</select></Field>
+        : <p className="wide font-semibold text-rust">This client has no sent or paid invoice to choose.</p>)}
       <p className="wide rounded-md bg-lichen px-3 py-2 font-semibold">{mins === null ? 'Enter start and finish times to see the total.' : `${hrs(mins)} hours, ${aud(earningsCents(mins, Math.max(0, w.rate_cents)))}`}</p>
     </FormDialog>
   )
