@@ -56,5 +56,5 @@ Removing access in the app takes effect at once. Also delete their user in Supab
 - Money is stored as whole cents. Hours, earnings, distances and statuses are calculated, never stored.
 - Drafts follow your current hours. Marking an invoice as sent locks its contents and hours. **Back to draft** unlocks it.
 - Invoices print one "Gardening services" line. The daily breakdown stays in the app.
-- Cents per km and logbook are alternatives, chosen per financial year in Settings. Under cents per km, car costs are not deducted again.
+- Cents per km and logbook are alternatives, chosen per financial year under Vehicle in Settings. Under cents per km, car costs are not deducted again.
 - Tax figures are estimates. Rates for 2025-26 and 2026-27 are built in and editable. The Medicare low-income threshold, cents per km and HELP figures for 2026-27 came from secondary sources: check them at ato.gov.au.

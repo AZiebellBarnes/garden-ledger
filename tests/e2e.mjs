@@ -27,6 +27,16 @@ else {
   for (const [l, v] of [['Name', 'Sam Example'], ['ABN', '1'], ['BSB', '000-000'], ['Account number', '1']]) await p.getByLabel(l, { exact: true }).fill(v)
   await btn('Save settings').click()
 }
+// The claim method lives with the vehicle, and saving wages must not reset it.
+const method = p.locator('form', { hasText: 'Number plate' }).getByLabel(/^Claim method/)
+await method.selectOption('logbook'); await p.getByLabel('Logbook business use (%)').fill('60'); await btn('Save settings').click(); await p.getByText('Settings saved').waitFor()
+await p.getByLabel('Gross wages from other jobs ($)').fill('1000'); await btn('Save year').click(); await p.getByText(/^20\d\d-\d\d saved$/).waitFor()
+await p.reload(); await method.waitFor()
+assert.equal(await method.inputValue(), 'logbook')
+assert.equal(await p.getByLabel('Logbook business use (%)').inputValue(), '60')
+assert.equal(await p.getByLabel('Gross wages from other jobs ($)').inputValue(), '1,000.00')
+await method.selectOption('cents_per_km'); await btn('Save settings').click(); await p.getByText('Settings saved').waitFor()
+assert.equal(await p.getByLabel('Gross wages from other jobs ($)').inputValue(), '1,000.00')
 await nav('Hours')
 await btn('Log hours').first().click()
 await fill('Start', '15:00'); await fill('Finish', '07:00')
