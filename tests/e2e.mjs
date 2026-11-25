@@ -87,7 +87,7 @@ await p.reload(); await p.getByText('Renamed').or(p.locator('input[value="Rename
 // Every page at phone and desktop width: no sideways scrolling.
 for (const [w, h] of [[390, 844], [1280, 900]]) {
   await p.setViewportSize({ width: w, height: h })
-  for (const n of ['Today', 'Hours', 'Vehicle', 'Receipts', 'Invoices', 'Tax', 'Spreadsheet', 'Settings']) {
+  for (const n of ['Today', 'Hours', 'Vehicle', 'Receipts', 'Invoices', 'Tax', 'Spreadsheet', 'Contractor', 'Settings']) {
     await nav(n); await p.waitForTimeout(700)
     const over = await p.evaluate(() => Math.max(document.documentElement.scrollWidth, ...[...document.querySelectorAll("main .panel, main form")].map(e => Math.ceil(e.getBoundingClientRect().right))) - document.documentElement.clientWidth)
     assert.ok(over <= 0, `${n} overflows by ${over}px at ${w}px`)

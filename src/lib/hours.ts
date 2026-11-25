@@ -4,11 +4,12 @@ export function workMinutes(start: string, finish: string, brk: number): number 
   const n = mins(finish) - mins(start) - brk
   return Number.isFinite(n) && brk >= 0 && n > 0 ? n : null
 }
-export const minutesOf = (w: Work) => workMinutes(w.start, w.finish, w.break_min) ?? 0
+type Shift = Pick<Work, 'date' | 'start' | 'finish' | 'break_min' | 'rate_cents'>
+export const minutesOf = (w: Shift) => workMinutes(w.start, w.finish, w.break_min) ?? 0
 export const earningsCents = (m: number, rate: number) => Math.round((m * rate) / 60)
-export const earningsOf = (w: Work) => earningsCents(minutesOf(w), w.rate_cents)
+export const earningsOf = (w: Shift) => earningsCents(minutesOf(w), w.rate_cents)
 export const hrs = (m: number) => (m / 60).toFixed(2).replace(/\.?0+$/, '')
-export function dailyTotals(rows: Work[]): Day[] {
+export function dailyTotals(rows: Shift[]): Day[] {
   const by = new Map<string, Day>()
   for (const w of rows) {
     const d = by.get(w.date) ?? { date: w.date, minutes: 0, cents: 0 }

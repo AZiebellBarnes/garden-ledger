@@ -17,13 +17,17 @@ import Invoices from './pages/Invoices'
 import Tax from './pages/Tax'
 import Spreadsheet from './pages/Spreadsheet'
 import SettingsPage from './pages/SettingsPage'
+import Contractor from './pages/Contractor'
+import ContractorHome from './pages/ContractorHome'
+import { isContractor, Sharing } from './data/sharing'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const key = import.meta.env.VITE_SUPABASE_KEY as string | undefined
 const client = url && key ? createClient(url, key) : null
+const sharing = client ? new Sharing(client) : undefined
 const localStore = client ? null : new LocalStore()
 
-const NAV = [['/', 'Today'], ['/work', 'Hours'], ['/vehicle', 'Vehicle'], ['/receipts', 'Receipts'], ['/invoices', 'Invoices'], ['/tax', 'Tax'], ['/spreadsheet', 'Spreadsheet'], ['/settings', 'Settings']] as const
+const NAV = [['/', 'Today'], ['/work', 'Hours'], ['/vehicle', 'Vehicle'], ['/receipts', 'Receipts'], ['/invoices', 'Invoices'], ['/tax', 'Tax'], ['/spreadsheet', 'Spreadsheet'], ['/contractor', 'Contractor'], ['/settings', 'Settings']] as const
 
 function Shell() {
   const { local, signOut } = useApp()
@@ -45,6 +49,7 @@ function Shell() {
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/tax" element={<Tax />} />
           <Route path="/spreadsheet" element={<Spreadsheet />} />
+          <Route path="/contractor" element={<Contractor />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Home />} />
         </Routes>
@@ -81,9 +86,21 @@ function Root() {
   }, [])
   const uid = session?.user.id
   const store = useMemo(() => (client ? (uid ? new SupabaseStore(client, uid) : null) : localStore), [uid])
+  // Nothing of the ledger loads until we know whose login this is.
+  const [role, setRole] = useState<{ uid: string; contractor: boolean } | null>(null), [roleErr, setRoleErr] = useState(''), [tries, setTries] = useState(0)
+  useEffect(() => {
+    if (!client || !uid) return
+    let dead = false
+    setRoleErr('')
+    isContractor(client).then(contractor => { if (!dead) setRole({ uid, contractor }) }).catch(e => { if (!dead) setRoleErr(e.message) })
+    return () => { dead = true }
+  }, [uid, tries])
+  const signOut = client ? () => void client.auth.signOut() : undefined
   if (session === undefined) return <p className="p-6">Loading…</p>
   if (!store) return <SignIn />
-  return <AppProvider key={uid ?? 'local'} store={store} local={!client} signOut={client ? () => void client.auth.signOut() : undefined}><Shell /></AppProvider>
+  if (client && role?.uid !== uid) return roleErr ? <div className="p-6"><p className="mb-3">Your account could not be checked: {roleErr}</p><button className="btn" onClick={() => setTries(tries + 1)}>Try again</button></div> : <p className="p-6">Loading…</p>
+  if (client && role?.contractor) return <ContractorHome client={client} signOut={signOut!} />
+  return <AppProvider key={uid ?? 'local'} store={store} local={!client} sharing={sharing} signOut={signOut}><Shell /></AppProvider>
 }
 
 createRoot(document.getElementById('root')!).render(<StrictMode><HashRouter><Root /></HashRouter></StrictMode>)

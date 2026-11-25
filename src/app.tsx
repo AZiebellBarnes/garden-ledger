@@ -1,18 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Data } from './lib/types'
 import type { Store } from './data/store'
+import type { Sharing } from './data/sharing'
 import { refreshDraft } from './lib/invoices'
 import { today as now } from './lib/dates'
 
 type Ctx = {
-  data: Data; store: Store; today: string; local: boolean; signOut?: () => void
+  data: Data; store: Store; today: string; local: boolean; signOut?: () => void; sharing?: Sharing
   /** Runs a change, reloads, and reports the result. Resolves to whether it worked. */
   act: (fn: () => Promise<unknown>, done?: string) => Promise<boolean>
 }
 const C = createContext<Ctx | null>(null)
 export const useApp = () => useContext(C)!
 
-export function AppProvider({ store, local, signOut, children }: { store: Store; local: boolean; signOut?: () => void; children: ReactNode }) {
+export function AppProvider({ store, local, signOut, sharing, children }: { store: Store; local: boolean; signOut?: () => void; sharing?: Sharing; children: ReactNode }) {
   const [raw, setRaw] = useState<Data | null>(null)
   const [fail, setFail] = useState('')
   const [note, setNote] = useState<{ text: string; bad: boolean } | null>(null)
@@ -32,7 +33,7 @@ export function AppProvider({ store, local, signOut, children }: { store: Store;
   const data = useMemo(() => raw && { ...raw, invoices: raw.invoices.map(i => refreshDraft(i, raw.work, raw.settings, raw.clients)) }, [raw])
   if (!data) return <div className="p-6">{fail ? <><p className="mb-3">Your records could not be loaded: {fail}</p><button className="btn" onClick={() => reload().catch(e => setFail(e.message))}>Try again</button></> : 'Loading your records…'}</div>
   return (
-    <C.Provider value={{ data, store, today, local, signOut, act }}>
+    <C.Provider value={{ data, store, today, local, signOut, sharing, act }}>
       {children}
       <div aria-live="polite" className="fixed inset-x-4 bottom-24 z-50 flex justify-center pointer-events-none md:bottom-6">
         {/* A modal dialog covers this, so dialogs also show their own errors. */}
