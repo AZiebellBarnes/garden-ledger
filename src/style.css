@@ -1,0 +1,68 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-lichen: #e6eee4;
+  --color-leaf: #2f5d3a;
+  --color-moss: #d3e1cf;
+  --color-ink: #14261a;
+  --color-stone: #55665a;
+  --color-marigold: #f2b632;
+  --color-rust: #a83a22;
+  --font-sans: 'Figtree Variable', system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+}
+
+@layer base {
+  html { background: var(--color-lichen); color: var(--color-ink); font-family: var(--font-sans); -webkit-text-size-adjust: 100%; }
+  body { margin: 0; font-variant-numeric: tabular-nums; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.015em; text-wrap: balance; }
+  h1 { font-size: 1.9rem; line-height: 1.1; }
+  h2 { font-size: 1.2rem; line-height: 1.2; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--color-marigold); outline-offset: 2px; }
+  input:not([type='checkbox']):not([type='file']), select, textarea { width: 100%; min-width: 0; min-height: 46px; padding: 0.5rem 0.75rem; font-size: 16px; background: #fff; border: 1.5px solid #9db3a0; border-radius: 6px; color: inherit; }
+  input[type='checkbox'] { width: 22px; height: 22px; accent-color: var(--color-leaf); flex: none; }
+  dialog { color: inherit; }
+}
+
+@layer components {
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; min-height: 46px; padding: 0.4rem 1.1rem; font-weight: 650; border-radius: 6px; background: var(--color-leaf); color: #fff; }
+  .btn:hover { background: #234a2d; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-quiet { background: var(--color-moss); color: var(--color-ink); }
+  .btn-quiet:hover { background: #bfd3ba; }
+  .btn-danger { background: transparent; color: var(--color-rust); }
+  .btn-danger:hover { background: #f6dfd9; }
+  .panel { background: #fff; border-radius: 10px; padding: 1.1rem; }
+  .label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.3rem; }
+  .hint { font-size: 0.86rem; color: var(--color-stone); }
+  .tag { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 4px; font-size: 0.82rem; font-weight: 650; background: var(--color-moss); white-space: nowrap; }
+  .tag-paid { background: var(--color-leaf); color: #fff; }
+  .tag-sent, .tag-invoiced { background: #fbe6b4; }
+  .tag-overdue { background: var(--color-rust); color: #fff; }
+  .rows > * { border-top: 1px solid var(--color-moss); }
+  .rows > *:first-child { border-top: 0; }
+  .grid-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
+  .grid-form > .wide { grid-column: 1 / -1; }
+  .sheet { border-collapse: collapse; font-size: 0.92rem; background: #fff; min-width: 100%; }
+  .sheet th { position: sticky; top: 0; background: var(--color-leaf); color: #fff; text-align: left; font-weight: 600; padding: 0.55rem 0.6rem; white-space: nowrap; z-index: 1; }
+  .sheet td { border: 1px solid var(--color-moss); padding: 0; white-space: nowrap; }
+  .sheet td > span { display: block; padding: 0.5rem 0.6rem; background: #f3f7f2; min-height: 38px; }
+  .sheet .num { text-align: right; }
+}
+.sheet td :is(input, select):not([type='checkbox']) { min-height: 38px; border: 0; border-radius: 0; padding: 0.3rem 0.6rem; font-size: 0.92rem; min-width: 7.5rem; }
+.sheet .num input { text-align: right; }
+
+/* The week bed: one plant per day, as tall as the hours worked. */
+.bed { display: grid; grid-template-columns: repeat(7, 1fr); align-items: end; height: 168px; border-bottom: 12px solid #4a3527; border-radius: 0 0 6px 6px; }
+.bed-day { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; font-weight: 650; font-size: 0.9rem; }
+.stem { width: 5px; background: var(--color-leaf); position: relative; border-radius: 3px 3px 0 0; }
+.stem::before, .stem::after { content: ''; position: absolute; width: 19px; height: 12px; background: var(--color-leaf); top: 10px; }
+.stem::before { right: 3px; border-radius: 100% 0 100% 0; }
+.stem::after { left: 3px; top: 22px; border-radius: 0 100% 0 100%; }
+.bloom { width: 17px; height: 17px; border-radius: 50%; background: var(--color-marigold); border: 4px solid #d8951a; }
+.seed { width: 8px; height: 5px; border-radius: 50%; background: #a58f80; }
+@media (prefers-reduced-motion: no-preference) {
+  .stem { transform-origin: bottom; animation: grow 0.6s ease-out; }
+  @keyframes grow { from { transform: scaleY(0.1); } }
+}
